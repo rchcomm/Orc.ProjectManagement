@@ -21,7 +21,10 @@ namespace Orc.ProjectManagement
         #endregion
 
         #region Methods
+        [ObsoleteEx(ReplacementTypeOrMember = "GetState", TreatAsErrorFromVersion = "1.0", RemoveInVersion = "2.0")]
         ProjectState GetProjectState(IProject project);
+        ProjectState GetState(string progectLocation);
+        void UpdateState(string location, Action<ProjectState> updateAction);
         #endregion
     }
 }

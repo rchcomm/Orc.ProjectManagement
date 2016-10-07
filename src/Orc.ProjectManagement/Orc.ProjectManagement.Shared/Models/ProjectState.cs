@@ -8,15 +8,16 @@
 namespace Orc.ProjectManagement
 {
     using Catel;
+    using System;
 
-    public class ProjectState
+    public class ProjectState : ICloneable
     {
         public ProjectState()
         {
             
         }
 
-        public ProjectState(ProjectState projectState)
+        protected ProjectState(ProjectState projectState)
         {
             Argument.IsNotNull(() => projectState);
 
@@ -33,6 +34,8 @@ namespace Orc.ProjectManagement
 
         public bool IsLoading { get; set; }
 
+        public bool IsClosing { get; set; }
+
         public bool IsSaving { get; set; }
 
         public bool IsRefreshing { get; set; }
@@ -41,6 +44,14 @@ namespace Orc.ProjectManagement
 
         public bool IsActivating { get; set; }
 
-        public bool IsClosing { get; set; }
+        public ProjectState Clone()
+        {
+            return new ProjectState(this);
+        }
+
+        object ICloneable.Clone()
+        {
+            return Clone();
+        }
     }
 }

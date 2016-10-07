@@ -25,6 +25,7 @@ namespace Orc.ProjectManagement
         private static readonly ILog Log = LogManager.GetCurrentClassLogger();
         private readonly IProjectInitializer _projectInitializer;
         private readonly IProjectManagementInitializationService _projectManagementInitializationService;
+        private readonly IProjectStateService _projectStateService;
         private readonly IDictionary<string, IProjectRefresher> _projectRefreshers;
         private readonly IProjectRefresherSelector _projectRefresherSelector;
         private readonly ListDictionary<string, IProject> _projects;
@@ -41,7 +42,7 @@ namespace Orc.ProjectManagement
         #region Constructors
         public ProjectManager(IProjectValidator projectValidator, IProjectUpgrader projectUpgrader, IProjectRefresherSelector projectRefresherSelector, 
             IProjectSerializerSelector projectSerializerSelector, IProjectInitializer projectInitializer, IProjectManagementConfigurationService projectManagementConfigurationService,
-            IProjectManagementInitializationService projectManagementInitializationService)
+            IProjectManagementInitializationService projectManagementInitializationService, IProjectStateService projectStateService)
         {
             Argument.IsNotNull(() => projectValidator);
             Argument.IsNotNull(() => projectUpgrader);
@@ -50,6 +51,7 @@ namespace Orc.ProjectManagement
             Argument.IsNotNull(() => projectInitializer);
             Argument.IsNotNull(() => projectManagementConfigurationService);
             Argument.IsNotNull(() => projectManagementInitializationService);
+            Argument.IsNotNull(() => projectStateService);
 
             _projectValidator = projectValidator;
             _projectUpgrader = projectUpgrader;
@@ -57,6 +59,7 @@ namespace Orc.ProjectManagement
             _projectSerializerSelector = projectSerializerSelector;
             _projectInitializer = projectInitializer;
             _projectManagementInitializationService = projectManagementInitializationService;
+            _projectStateService = projectStateService;
 
             _projects = new ListDictionary<string, IProject>();
             _projectRefreshers = new ConcurrentDictionary<string, IProjectRefresher>();
@@ -506,25 +509,30 @@ namespace Orc.ProjectManagement
         public virtual async Task<bool> SetActiveProjectAsync(IProject project)
         {
             using (await _asyncActivateLock.LockAsync())
-            {
+            {                
+                if(project == null)
+                {
+                    return await DeactivateActiveProjectAsync();
+                }
+
                 var activeProject = ActiveProject;
 
-                if (project != null && !Projects.Contains(project))
+                if (!Projects.Contains(project))
                 {
+                    Log.Warning($"Unable to activate it project '{project.Location}' because it does not exists in the list of known projects");
                     return false;
                 }
 
-                var activeProjectLocation = activeProject == null ? null : activeProject.Location;
-                var newProjectLocation = project == null ? null : project.Location;
+                var activeProjectLocation = activeProject?.Location;
+                var newProjectLocation = project?.Location;
 
                 if (string.Equals(activeProjectLocation, newProjectLocation))
                 {
+                    Log.Debug($"The project '{newProjectLocation ?? string.Empty}' is already active, no need to activate it again");
                     return false;
                 }
 
-                Log.Info(project != null
-                    ? $"Activating project '{project.Location}'"
-                    : "Deactivating currently active project");
+                Log.Info($"Activating project '{project.Location}'");
 
                 var eventArgs = new ProjectUpdatingCancelEventArgs(activeProject, project);
 
@@ -532,9 +540,7 @@ namespace Orc.ProjectManagement
 
                 if (eventArgs.Cancel)
                 {
-                    Log.Info(project != null
-                        ? $"Activating project '{project.Location}' was canceled"
-                        : "Deactivating currently active project");
+                    Log.Info($"Activating project '{project.Location}' was canceled");
 
                     await ProjectActivationCanceledAsync.SafeInvokeAsync(this, new ProjectEventArgs(project)).ConfigureAwait(false);
                     return false;
@@ -569,6 +575,32 @@ namespace Orc.ProjectManagement
             }
 
             return true;
+        }
+
+        private async Task<bool> DeactivateActiveProjectAsync()
+        {
+            var project = ActiveProject;
+            var location = project?.Location;
+
+            if (ReferenceEquals(location, null))
+            {
+                return false;
+            }
+
+            Log.Info($"Deactivating project '{location}'");
+
+            var eventArgs = new ProjectUpdatingCancelEventArgs(project, null);
+            await ProjectActivationAsync.SafeInvokeAsync(this, eventArgs, false).ConfigureAwait(false);
+
+            _projectStateService.UpdateState(location, state => state.IsDeactivating = true);
+
+            if (eventArgs.Cancel)
+            {
+                Log.Info($"Deactivating project '{location}' was canceled");
+
+                await ProjectActivationCanceledAsync.SafeInvokeAsync(this, new ProjectEventArgs(project)).ConfigureAwait(false);
+                return false;
+            }
         }
 
         private void InitializeProjectRefresher(string projectLocation)

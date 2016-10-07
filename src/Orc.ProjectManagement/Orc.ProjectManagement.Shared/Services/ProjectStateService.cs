@@ -9,8 +9,6 @@ namespace Orc.ProjectManagement
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
-    using System.Reflection;
     using System.Threading.Tasks;
     using Catel;
     using Catel.Data;
@@ -24,7 +22,7 @@ namespace Orc.ProjectManagement
         private readonly IProjectManager _projectManager;
 
         private readonly Dictionary<string, ProjectState> _projectStates = new Dictionary<string, ProjectState>();
-        private string _lastActiveProject = string.Empty;
+       // private string _lastActiveProject = string.Empty;
         private bool _isRefreshingActiveProject;
 
         public ProjectStateService(IProjectManager projectManager)
@@ -33,9 +31,9 @@ namespace Orc.ProjectManagement
 
             _projectManager = projectManager;
 
-            InitSubscriptions();
+         //   InitSubscriptions();
 
-            _lastActiveProject = _projectManager.ActiveProject?.Location;
+         //   _lastActiveProject = _projectManager.ActiveProject?.Location;
         }
 
         public bool IsRefreshingActiveProject
@@ -59,40 +57,46 @@ namespace Orc.ProjectManagement
         {
             Argument.IsNotNull(() => project);
 
-            var location = project.Location;
-            ProjectState projectState = null;
+            return GetState(project.Location);
+        }
 
-            _projectStates.TryGetValue(location, out projectState);
+        [ObsoleteEx(ReplacementTypeOrMember = "GetState", TreatAsErrorFromVersion = "1.0", RemoveInVersion = "2.0")]
+        public ProjectState GetState(string progectLocation)
+        {
+            Argument.IsNotNullOrWhitespace(() => progectLocation);
+
+            ProjectState projectState = null;
+            _projectStates.TryGetValue(progectLocation, out projectState);
 
             return projectState;
         }
 
-        private void InitSubscriptions()
-        {
-            _projectManager.ProjectLoadingAsync += async (sender, e) => await OnLoadingAsync(e).ConfigureAwait(false);
-            _projectManager.ProjectLoadingFailedAsync += async (sender, e) => await OnLoadingFailedAsync(e.Location, e.Exception, e.ValidationContext).ConfigureAwait(false);
-            _projectManager.ProjectLoadingCanceledAsync += async (sender, e) => await OnLoadingCanceledAsync(e.Location).ConfigureAwait(false);
-            _projectManager.ProjectLoadedAsync += async (sender, e) => await OnLoadedAsync(e.Project).ConfigureAwait(false);
+        //private void InitSubscriptions()
+        //{
+        //    _projectManager.ProjectLoadingAsync += async (sender, e) => await OnLoadingAsync(e).ConfigureAwait(false);
+        //    _projectManager.ProjectLoadingFailedAsync += async (sender, e) => await OnLoadingFailedAsync(e.Location, e.Exception, e.ValidationContext).ConfigureAwait(false);
+        //    _projectManager.ProjectLoadingCanceledAsync += async (sender, e) => await OnLoadingCanceledAsync(e.Location).ConfigureAwait(false);
+        //    _projectManager.ProjectLoadedAsync += async (sender, e) => await OnLoadedAsync(e.Project).ConfigureAwait(false);
 
-            _projectManager.ProjectSavingAsync += async (sender, e) => await OnSavingAsync(e).ConfigureAwait(false);
-            _projectManager.ProjectSavingCanceledAsync += async (sender, e) => await OnSavingCanceledAsync(e.Project).ConfigureAwait(false);
-            _projectManager.ProjectSavingFailedAsync += async (sender, e) => await OnSavingFailedAsync(e.Project, e.Exception).ConfigureAwait(false);
-            _projectManager.ProjectSavedAsync += async (sender, e) => await OnSavedAsync(e.Project).ConfigureAwait(false);
+        //    _projectManager.ProjectSavingAsync += async (sender, e) => await OnSavingAsync(e).ConfigureAwait(false);
+        //    _projectManager.ProjectSavingCanceledAsync += async (sender, e) => await OnSavingCanceledAsync(e.Project).ConfigureAwait(false);
+        //    _projectManager.ProjectSavingFailedAsync += async (sender, e) => await OnSavingFailedAsync(e.Project, e.Exception).ConfigureAwait(false);
+        //    _projectManager.ProjectSavedAsync += async (sender, e) => await OnSavedAsync(e.Project).ConfigureAwait(false);
 
-            _projectManager.ProjectClosingAsync += async (sender, e) => await OnClosingAsync(e).ConfigureAwait(false);
-            _projectManager.ProjectClosingCanceledAsync += async (sender, e) => await OnClosingCanceledAsync(e.Project).ConfigureAwait(false);
-            _projectManager.ProjectClosedAsync += async (sender, e) => await OnClosedAsync(e.Project).ConfigureAwait(false);
+        //    _projectManager.ProjectClosingAsync += async (sender, e) => await OnClosingAsync(e).ConfigureAwait(false);
+        //    _projectManager.ProjectClosingCanceledAsync += async (sender, e) => await OnClosingCanceledAsync(e.Project).ConfigureAwait(false);
+        //    _projectManager.ProjectClosedAsync += async (sender, e) => await OnClosedAsync(e.Project).ConfigureAwait(false);
 
-            _projectManager.ProjectActivationAsync += async (sender, e) => await OnActivationAsync(e).ConfigureAwait(false);
-            _projectManager.ProjectActivationFailedAsync += async (sender, e) => await OnActivationFailedAsync(e.Project, e.Exception).ConfigureAwait(false);
-            _projectManager.ProjectActivationCanceledAsync += async (sender, e) => await OnActivationCanceledAsync(e.Project).ConfigureAwait(false);
-            _projectManager.ProjectActivatedAsync += async (sender, e) => await OnActivatedAsync(e.OldProject, e.NewProject).ConfigureAwait(false);
+        //    _projectManager.ProjectActivationAsync += async (sender, e) => await OnActivationAsync(e).ConfigureAwait(false);
+        //    _projectManager.ProjectActivationFailedAsync += async (sender, e) => await OnActivationFailedAsync(e.Project, e.Exception).ConfigureAwait(false);
+        //    _projectManager.ProjectActivationCanceledAsync += async (sender, e) => await OnActivationCanceledAsync(e.Project).ConfigureAwait(false);
+        //    _projectManager.ProjectActivatedAsync += async (sender, e) => await OnActivatedAsync(e.OldProject, e.NewProject).ConfigureAwait(false);
 
-            _projectManager.ProjectRefreshingAsync += async (sender, e) => await OnRefreshingAsync(e).ConfigureAwait(false);
-            _projectManager.ProjectRefreshingFailedAsync += async (sender, e) => await OnRefreshingFailedAsync(e.Project, e.Exception, e.ValidationContext).ConfigureAwait(false);
-            _projectManager.ProjectRefreshingCanceledAsync += async (sender, e) => await OnRefreshingCanceledAsync(e.Project).ConfigureAwait(false);
-            _projectManager.ProjectRefreshedAsync += async (sender, e) => await OnRefreshedAsync(e.Project).ConfigureAwait(false);
-        }
+        //    _projectManager.ProjectRefreshingAsync += async (sender, e) => await OnRefreshingAsync(e).ConfigureAwait(false);
+        //    _projectManager.ProjectRefreshingFailedAsync += async (sender, e) => await OnRefreshingFailedAsync(e.Project, e.Exception, e.ValidationContext).ConfigureAwait(false);
+        //    _projectManager.ProjectRefreshingCanceledAsync += async (sender, e) => await OnRefreshingCanceledAsync(e.Project).ConfigureAwait(false);
+        //    _projectManager.ProjectRefreshedAsync += async (sender, e) => await OnRefreshedAsync(e.Project).ConfigureAwait(false);
+        //}
 
         private Task OnLoadingAsync(ProjectCancelEventArgs e)
         {
@@ -259,7 +263,7 @@ namespace Orc.ProjectManagement
             return TaskHelper.Completed;
         }
 
-        private void UpdateState(string location, Action<ProjectState> updateAction)
+        public void UpdateState(string location, Action<ProjectState> updateAction)
         {
             if (string.IsNullOrEmpty(location))
             {
@@ -280,7 +284,7 @@ namespace Orc.ProjectManagement
 
             updateAction(projectState);
 
-            ProjectStateUpdated.SafeInvoke(this, () => new ProjectStateEventArgs(new ProjectState(projectState)));
+            ProjectStateUpdated.SafeInvoke(this, () => new ProjectStateEventArgs(projectState.Clone()));
         }
     }
 }
